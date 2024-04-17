@@ -1,0 +1,86 @@
+version: '2.0'
+
+# networks
+# cree un reseau 'guacnetwork_compose' en mode 'bridged'
+networks:
+  guacnetwork_compose:
+    driver: bridge
+
+# services
+services:
+  # guacd
+  guacd:
+    container_name: guacd_compose
+    image: guacamole/guacd
+    networks:
+      guacnetwork_compose:
+    restart: always
+    volumes:
+    - /path/to/guacamole/drive:/drive:rw
+    - /path/to/guacamole/record:/record:rw
+  # MariaDB guacamole_db
+  guacamole_db:
+    container_name: guacamole_db
+    environment:
+      MYSQL_ROOT_PASSWORD: motdepasse
+      MYSQL_DATABASE: guacamole_db
+      MYSQL_USER: guacamole_user
+      MYSQL_PASSWORD: motdepasse
+    image: mariadb:latest
+    networks:
+      guacnetwork_compose:
+    restart: always
+    volumes:
+    - /path/to/guacamole/init:/docker-entrypoint-initdb.d:z
+    - /path/to/guacamole/data:/var/lib/mysql/data:Z
+
+  # guacamole
+  guacamole:
+    container_name: guacamole_compose
+    depends_on:
+    - guacd
+    - guacamole_db
+    environment:
+      GUACD_HOSTNAME: guacd
+      MYSQL_HOSTNAME: guacamole_db
+      MYSQL_DATABASE: guacamole_db
+      MYSQL_USER: guacamole_user
+      MYSQL_PASSWORD: motdepasse
+      # Authentification LDAP
+      LDAP_HOSTNAME: ipcontroleurdedomaine
+      LDAP_USER_BASE_DN: OU=Exemple,DC=domaine,DC=local
+      LDAP_SEARCH_BIND_DN: utilisateur@domaine.local
+      LDAP_SEARCH_BIND_PASSWORD: motdepasse
+      LDAP_USERNAME_ATTRIBUTE: sAMAccountName
+      LDAP_USER_SEARCH_FILTER: "(&(objectClass=user)(sAMAccountName=*)(memberOf=CN=GUACAMOLE_ACCESS,OU=Exemple,DC=domaine,DC=local))"
+      LDAP_GROUP_BASE_DN: OU=Exemple,DC=domaine,DC=local
+      LDAP_GROUP_SEARCH_FILTER: (objectClass=group)
+      EXTENSION-PRIORITY: ldap
+    image: guacamole/guacamole
+    links:
+    - guacd
+    networks:
+      guacnetwork_compose:
+    ports:
+## activez la ligne ci dessous et commentez celle d'apres si vous n'utilisez pas Nginx
+##    - 8080:8080/tcp # Guacamole est sur :8080/guacamole, pas /.
+## activez la ligne ci dessous et commentez celle d'avant si utilisez Nginx
+    - 8080/tcp
+    restart: always
+
+########### optionel ##############
+  # nginx
+  nginx:
+   container_name: nginx_guacamole_compose
+   restart: always
+   image: nginx
+   volumes:
+   - /path/to/guacamole/nginx/templates:/etc/nginx/templates:ro
+   - /path/to/guacamole/nginx/ssl/self.cert:/etc/nginx/ssl/self.cert:ro
+   - /path/to/guacamole/nginx/ssl/self-ssl.key:/etc/nginx/ssl/self-ssl.key:ro
+   ports:
+   - 8443:443
+   links:
+   - guacamole
+   networks:
+     guacnetwork_compose:
