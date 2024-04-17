@@ -42,11 +42,10 @@ Pour installer Guacamole Docker, suivez ces étapes :
 
 En bref :
 
-    ```bash
-    git clone "https://github.com/PzPr0T0N/Guacamole-Docker.git"
-    mv Guacamole-Docker/ guacamole/
-    cd guacamole
-    sh prepare.sh
-    docker-compose up -d
-    ```
-
+```bash
+git clone "https://github.com/PzPr0T0N/Guacamole-Docker.git"
+mv Guacamole-Docker/ guacamole/
+cd guacamole
+sh prepare.sh
+docker-compose up -d
+```
